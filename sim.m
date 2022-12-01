@@ -59,11 +59,11 @@ freq_complex_sample = fft2(complex_sample);
 
 % Inverse Fourier Transform of image 
 
-x_lin = linspace(0,10,pixels);
-y_lin = cos(x_lin*pi/4)
-y_fft = fft(y_lin)
-xdft = fftshift(y_fft);
-plot(xdft,y_fft)
+% x_lin = linspace(0,10,pixels);
+% y_lin = cos(x_lin*pi/3)
+% y_fft = fft(y_lin)
+% xdft = fftshift(y_fft);
+% plot(xdft,y_fft)
 
 %% Repeat all steps with phase shaped inputs
 % for i=1:3
