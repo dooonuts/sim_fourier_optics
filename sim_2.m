@@ -50,7 +50,7 @@ for t = 1:length(theta_)
     %% Multiply sample and pattern in real space, initial intensity I1
         I1 = rotated_illum.*sample;
 %         I1 = sample;
-        figure; imshow(I1)
+%         figure; imshow(I1)
 
         I1_(:,:,t) = I1;
         %% Convert I1 to frequency space
@@ -85,20 +85,37 @@ for t = 1:length(theta_)
         H_incoh_freq = OTF2dc;
 
         E_fft = I1_fft .* H_incoh_freq;
-        figure; imagesc(log(1+abs(E_fft)))
-%         figure; imshow(E_fft)
-        title("FFT after OTF")
+%         figure; imagesc(log(1+abs(E_fft)))
+% %         figure; imshow(E_fft)
+%         title("FFT after OTF")
 
 %         E_fft_(:,:,t) = E_fft;
         %% Inverse FT of output intensity, I2
 
         E = ifft2(ifftshift(E_fft));
-        figure; imagesc(E)
-        title("IFFT after OTF")
+%         figure; imagesc(E)
+%         title("IFFT after OTF")
 
         E_(:,:,t,p) = E_fft;
     end
 end
+
+M = [
+    [1 1/2*exp(-1i*deg2rad(0)) 1/2*exp(1i*deg2rad(0))]
+    [1 1/2*exp(-1i*deg2rad(120)) 1/2*exp(1i*deg2rad(120))]
+    [1 1/2*exp(-1i*deg2rad(240)) 1/2*exp(1i*deg2rad(240))]
+];
+% t1 = [E_(:,:,1,1) E_(:,:,1,2) E_(:,:,1,3)];
+Minv = inv(M);
+
+ft1o = Minv(1,1)*E_(:,:,1,1) + Minv(1,2)*E_(:,:,1,2) + Minv(1,3)*E_(:,:,1,3);
+ft1p = Minv(2,1)*E_(:,:,1,1) + Minv(2,2)*E_(:,:,1,2) + Minv(2,3)*E_(:,:,1,3);
+ft1m = Minv(3,1)*E_(:,:,1,1) + Minv(3,2)*E_(:,:,1,2) + Minv(3,3)*E_(:,:,1,3);
+
+ft2o = Minv(1,1)*E_(:,:,2,1) + Minv(1,2)*E_(:,:,2,2) + Minv(1,3)*E_(:,:,3,3);
+ft2p = Minv(2,1)*E_(:,:,2,1) + Minv(2,2)*E_(:,:,2,2) + Minv(2,3)*E_(:,:,3,3);
+ft2m = Minv(3,1)*E_(:,:,2,1) + Minv(3,2)*E_(:,:,2,2) + Minv(3,3)*E_(:,:,3,3);
+
 
 %% Shift Frequency components by theta
 
@@ -113,7 +130,7 @@ end
 
 
 %% doubling Fourier domain size if necessary
-w=pixels
+w=pixels;
 % DoubleMatSize = 0;
 % if ( 2*Kotf > wo )
 % 	DoubleMatSize = 1; % 1 for doubling fourier domain size, 0 for keeping it unchanged
@@ -148,20 +165,21 @@ v = linspace(0,t-1,t);
 
 Est_1 = fft2(ifft2(E_(:,:,1,1)));
 k1 = k0/t.*(U-to) + k0/t.*(V-to);
-k2 = k0*cosd(60)/t.*(U-to) + k0*i*sind(60)/t.*(V-to);
-k3 = k0*cosd(120)/t.*(U-to) + k0*i*sind(120)/t.*(V-to);
+k2 = k0*cosd(60)/t.*(U-to) + k0*1i*sind(60)/t.*(V-to);
+k3 = k0*cosd(120)/t.*(U-to) + k0*1i*sind(120)/t.*(V-to);
 % k0_ref = fft2(ifft2(E_(:,:,2,1)).*exp(+1i.*2*pi*k0));
 % figure;imshow(k0_ref)
 
-Est_2 = fft2(ifft2(E_(:,:,2,1)).*exp(+1i.*2*pi*k2));
-Est_3 = fft2(ifft2(E_(:,:,3,1)).*exp(+1i.*2*pi*k3));
+Est_2 = fft2(ifft2(ft1p).*exp(+1i.*2*pi*k2));
+% Est_3 = fft2(ifft2(E_(:,:,3,1)).*exp(+1i.*2*pi*k3));
 % Est_4 = fft2(ifft2(E_(:,:,1,1)));
 % Est_5 = fft2(ifft2(E_(:,:,2,1)).*exp(+1i.*2*pi*(120/t.*(U-to) + 60/t.*(V-to))));
 % Est_6 = fft2(ifft2(E_(:,:,3,1)).*exp(-1i.*2*pi*(120/t.*(U-to) + 120/t.*(V-to))));
 % Est_4 = fft2(ifft2(E_))
 
-Est_sum = Est_2+Est_3;
-figure;imshow(Est_sum)
+Est_sum = Est_2;
+figure; imagesc(log(1+abs(ft1p)));
+% figure;imagesc(log(1+abs(Est_sum)));
 % figure;imshow(Est_sum)
 % Est_sum = Est_6 + Est_5;
 % figure;imshow(Est_sum)
