@@ -26,7 +26,7 @@ end
 lambda = 100e-3;
 NA = 0.95;
 k0 = 2*NA/lambda;
-k0 = 450;
+k0 = 500;
 theta_ = [0 60 120];
 phi_ = [0 120 240];
 phi_ = deg2rad(phi_);
@@ -163,16 +163,16 @@ end
 %% Weiner Filter is Hconj/(|H|^2+Pnoise/Psignal), in our case... we have
 %%% no additive noise so just becomes H^-1
 % 
-for i=1:length(theta_)
-    for j=1:length(phi_)
+for i=1:length(phi_)
+    for j=1:length(theta_)
 %        shifted_H_incoh_freq = H_incoh_freq;
-       shifted_H_incoh_freq = circshift(H_incoh_freq, -kshift(:,:,3*(i-1)+j));
-%         tempG = conj(shifted_H_incoh_freq)./(abs(shifted_H_incoh_freq).^2).*S_tA(:,:,3*(i-1)+j);
-       tempG = inv(shifted_H_incoh_freq).*(S_tA(:,:,3*(i-1)+j));
-       G(:,:,3*(i-1)+j) = tempG;
-       figure; imagesc(log(1+abs(S_tA(:,:,3*(i-1)+j))))
-       figure; imagesc(log(1+abs(inv(shifted_H_incoh_freq))));
-       figure; imagesc((tempG));
+        shifted_H_incoh_freq = circshift(H_incoh_freq, -kshift(:,:,3*(i-1)+j));
+        tempG = conj(shifted_H_incoh_freq)./(abs(shifted_H_incoh_freq).^2).*S_tA(:,:,3*(i-1)+j);
+%        tempG = inv(H_incoh_freq).*S_tA(:,:,3*(i-1)+j);
+        G(:,:,3*(i-1)+j) = tempG;
+%         figure; imagesc(log(1+abs(S_tA(:,:,3*(i-1)+j))))
+%         figure; imagesc(log(1+abs(shifted_H_incoh_freq)));
+        figure; imagesc(log(1+abs(tempG)));
     end
 end
 
@@ -181,8 +181,7 @@ G_sum = zeros(512,512);
 for i=1:9
     G_sum = G_sum + G(:,:,i);
 end
-G_sum = G_sum/9;
-
 figure;imagesc(log(1+abs(G_sum)));
 reconstruct = ifft(ifftshift(G_sum));
 figure; imagesc(log(1+abs(reconstruct)))
+
