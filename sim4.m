@@ -2,6 +2,13 @@ close all
 clear
 clc
 
+%% Constants
+lambda = 100e-3;
+NA = 0.95;
+k0 = 2*NA/lambda;
+rho0 = 60;
+k0 = 8*rho0;
+
 %% Ground truth of sample
 
 % Circle for now
@@ -19,18 +26,30 @@ pixels = 1024;
 sample = imread("USAF-1951.svg.png");
 [r c] = size(sample)
 sample = double(sample(r/2-pixels/2:r/2+pixels/2-1,r/2-pixels/2:r/2+pixels/2-1));
-
 figure; imshow(sample)
-%% Create sample (low resolution of sample)
+
+%% Incoherent Transfer Function
+circle = zeros(pixels,pixels); %create empty array
+[y,x] = size(sample); %define y,x as size of array
+for i=1:y
+    for j=1:x
+        if ((i-y/2)^2)+((j-x/2)^2)<(rho0^2)  %define origin is at the center
+            circle(i,j) = 1;  %define array inside the circle eq. = 1
+        end
+    end
+end
+H_incoh_freq = conv2(circle,circle,'same');
+
+%% Create diffraction limited sample (low resolution of sample)
+sample_freq = fftshift(fft2(sample));
+diffraction_limited_image = ifft2(ifftshift(sample_freq.*H_incoh_freq));
+figure;imagesc(abs(diffraction_limited_image))
+colormap gray
 
 
 %% Generate illumination excitation pattern
 
 % lambda = 500e-9;
-lambda = 100e-3;
-NA = 0.95;
-k0 = 2*NA/lambda;
-k0 = 450;
 theta_ = [0 60 120];
 phi_ = [0 120 240];
 phi_ = deg2rad(phi_);
@@ -40,24 +59,21 @@ x = 1:pattern_pixels;
 y = 1:pattern_pixels; 
 [X,Y] = meshgrid(x,y);
 
-
 for t = 1:length(theta_)
-        theta = theta_(t);
+    theta = theta_(t);
 
-        kx = k0/pixels*cosd(theta);
-        ky = k0/pixels*sind(theta);
+    kx = k0/pixels*cosd(theta);
+    ky = k0/pixels*sind(theta);
+   
 
     for p = 1:length(phi_)
         phi = phi_(p);
-        rotated_illum = 1+cos(kx*X+ky*Y+phi);    
+        rotated_illum = 1+cos(kx*X+ky*Y+phi);   
+        ronchi_grating_freq = fftshift(fft2(rotated_illum))./(circle+1e-5);
+        ronchi_grating_real = ifft2(ifftshift(ronchi_grating_freq));
+%         figure; imshow(rotated_illum);
+        figure; imagesc(log(1+abs(ronchi_grating_real)));
 
-%         illum = 1+cos(k0/pixels*X+phi_(p));
-%         rotated_illum = imrotate(illum,theta);
-%         win = centerCropWindow2d(size(rotated_illum),size(sample));
-%         rotated_illum = imcrop(rotated_illum,win);
-       
-%         figure; 
-%         imshow(rotated_illum);
 
     %% Multiply sample and pattern in real space, initial intensity I1
         I1 = rotated_illum.*sample;
@@ -78,21 +94,6 @@ for t = 1:length(theta_)
         fy = linspace(0,w-1,w);
         [FX,FY] = meshgrid(fx,fy);
 
-    %         z2 = 1;
-    %     rho = FX.^2 + FY.^2;
-    %     rho_0 = w/2/lambda/z2;
-    %     H_incoh_freq = 2/pi * (acos(rho/2/rho_0) - rho/2/rho_0 * sqrt(1 - (rho/2/rho_0)^2));
-    %     H_incoh_freq = sample;
-        
-        scale = 0.25;
-        R=sqrt(min(FX,abs(FX-w)).^2+min(FY,abs(FY-w)).^2);
-        yy=abs(2*besselj(1,scale*R+eps,1)./(scale*R+eps)).^2;
-        OTF2d=fft2(yy);
-        OTF2dmax = max(max(abs(OTF2d)));
-        OTF2d = OTF2d./OTF2dmax;
-        OTF2dc = abs(fftshift(OTF2d));
-        H_incoh_freq = OTF2dc;
-
         E_fft = I1_fft .* H_incoh_freq;
 %         figure; imagesc(log(1+abs(E_fft)))
 %         title("FFT after OTF")
@@ -107,12 +108,6 @@ for t = 1:length(theta_)
         E_(:,:,t,p) = E_fft;
     end
 end
-
-sample_freq = fftshift(fft2(sample));
-diffraction_limited_image = ifft2(ifftshift(sample_freq.*H_incoh_freq));
-figure;imagesc(abs(diffraction_limited_image))
-colormap gray
-
 
 %% Separate components using phase
 
