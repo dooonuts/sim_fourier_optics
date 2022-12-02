@@ -17,10 +17,12 @@ pixels = 1024;
 %     end
 % end
 sample = imread("USAF-1951.svg.png");
-sample = double(sample(301:300+512,301:300+512));
+[r c] = size(sample)
+sample = double(sample(r/2-pixels/2:r/2+pixels/2-1,r/2-pixels/2:r/2+pixels/2-1));
 
 figure; imshow(sample)
 %% Create sample (low resolution of sample)
+
 
 %% Generate illumination excitation pattern
 
@@ -28,7 +30,7 @@ figure; imshow(sample)
 lambda = 100e-3;
 NA = 0.95;
 k0 = 2*NA/lambda;
-k0 = 200;
+k0 = 450;
 theta_ = [0 60 120];
 phi_ = [0 120 240];
 phi_ = deg2rad(phi_);
@@ -81,8 +83,8 @@ for t = 1:length(theta_)
     %     rho_0 = w/2/lambda/z2;
     %     H_incoh_freq = 2/pi * (acos(rho/2/rho_0) - rho/2/rho_0 * sqrt(1 - (rho/2/rho_0)^2));
     %     H_incoh_freq = sample;
-
-        scale = 0.35;
+        
+        scale = 0.25;
         R=sqrt(min(FX,abs(FX-w)).^2+min(FY,abs(FY-w)).^2);
         yy=abs(2*besselj(1,scale*R+eps,1)./(scale*R+eps)).^2;
         OTF2d=fft2(yy);
@@ -110,6 +112,7 @@ sample_freq = fftshift(fft2(sample));
 diffraction_limited_image = ifft2(ifftshift(sample_freq.*H_incoh_freq));
 figure;imagesc(abs(diffraction_limited_image))
 colormap gray
+
 
 %% Separate components using phase
 
@@ -146,12 +149,10 @@ for i = 1:length(theta_)
     % kshift = [round(kx*pixels-pixels/2), round(ky*pixels-pixels/2)];
     
     for j=1:length(phi_)
-        maximum = max(max(D_tA(:,:,j))); [ind1,ind2] = find(D_tA(:,:,j) == maximum)
-%         current_shift = [round(ind1-pixels/2-1), round(ind2-pixels/2-1)];
-        current_shift = [ind1-pixels/2-1, ind2-pixels/2-1]
-        kshift(:,:,3*(i-1)+j) = current_shift;
-        S_tA(:,:,3*(i-1)+j) = circshift(D_tA(:,:,j),-current_shift);
-        figure; imagesc(abs(1+log(S_tA(:,:,3*(i-1)+j))));
+        maximum = max(max(D_tA(:,:,j))); [ind1,ind2] = find(D_tA(:,:,j) == maximum);
+        current_shift = [round(ind1-pixels/2-1), round(ind2-pixels/2-1)];
+        kshift(:,:,length(theta_)*(i-1)+j) = current_shift;
+        S_tA(:,:,length(theta_)*(i-1)+j) = circshift(D_tA(:,:,j),-current_shift);
     end    
     % maximum = max(max(D_tAp2)); [ind1,ind2] = find(D_tAp2 == maximum);
     % kshift = [round(ind1-pixels/2), round(ind2-pixels/2)];
@@ -164,36 +165,28 @@ for i = 1:length(theta_)
     % figure; imagesc(abs(1+log(S_tA(:,:,3))));
 end  
 
-S_tA_sum = zeros(512,512);
+S_tA_sum = zeros(pixels,pixels);
 
-for i=1:9
+for i=1:length(theta_)*length(phi_)
     S_tA_sum = S_tA_sum + S_tA(:,:,i);
 end    
 
 
-
-
 %% Weiner Filter is Hconj/(|H|^2+Pnoise/Psignal), in our case... we have no additive noise so just becomes H^-1
 % 
-S_tA_sum_curr = zeros(512,512);
-H_incoh_freq_sum = zeros(512,512);
+H_incoh_freq_sum = zeros(pixels,pixels);
 for j=1:length(phi_)
     for i=1:length(theta_)
 %        shifted_H_incoh_freq = H_incoh_freq;
-        shifted_H_incoh_freq = circshift(H_incoh_freq, -kshift(:,:,3*(i-1)+j));
-        tempG = conj(shifted_H_incoh_freq)./(abs(shifted_H_incoh_freq).^2).*S_tA(:,:,3*(i-1)+j);
-        %tempG = inv(shifted_H_incoh_freq).*(S_tA(:,:,3*(i-1)+j));
-        G(:,:,3*(i-1)+j) = tempG;
+        shifted_H_incoh_freq = circshift(H_incoh_freq, -kshift(:,:,length(theta_)*(i-1)+j));
+        %tempG = conj(shifted_H_incoh_freq)./(abs(shifted_H_incoh_freq).^2).*S_tA(:,:,3*(i-1)+j);
+        tempG = inv(shifted_H_incoh_freq).*(S_tA(:,:,length(theta)*(i-1)+j));
+        G(:,:,length(theta_)*(i-1)+j) = tempG;
 %         figure; imagesc(log(1+abs(S_tA(:,:,3*(i-1)+j))))
 %         figure; imagesc(log(1+abs(H_incoh_freq)));
 %         figure; imagesc(log(1+abs(inv(shifted_H_incoh_freq))));
 %        figure; imagesc((tempG));
          H_incoh_freq_sum = H_incoh_freq_sum + shifted_H_incoh_freq;
-         S_tA_sum_curr = S_tA_sum_curr + S_tA(:,:,3*(i-1)+j);
-         reconstructed_freq = S_tA_sum_curr./(H_incoh_freq_sum + 1e-5);
-         sim_image = ifft2(ifftshift(reconstructed_freq));
-%          figure; imagesc(abs(sim_image));
-         colormap 'gray'
     end
 end
 

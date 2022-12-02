@@ -1,5 +1,5 @@
-function [cropped_rotated_image] = cos_image_generation(phase,k0)
-    image = zeros(1080,1080);
+function [cropped_rotated_image] = cos_image_generation(phase,k0,targetSize)
+    image = zeros(4096,4096);
     [y_cos_len, x_cos_len] = size(image);
     for i=1:y_cos_len
         for j=1:x_cos_len
@@ -9,7 +9,7 @@ function [cropped_rotated_image] = cos_image_generation(phase,k0)
     
 %     disp(min(image,[],"all"));
     rotated_image = imrotate(image, phase, "nearest", "loose");
-    targetSize = [360,360];
+    targetSize = targetSize;
     win1 = centerCropWindow2d(size(rotated_image),targetSize);
     cropped_rotated_image = imcrop(rotated_image,win1);
     figure; imshow(cropped_rotated_image)
