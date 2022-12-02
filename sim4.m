@@ -13,16 +13,7 @@ k0 = 8*rho0;
 
 % Circle for now
 pixels = 1024;
-% sample = zeros(pixels,pixels); %create empty array
-% [y,x] = size(sample); %define y,x as size of array
-% r = 100; %define radius of a circle
-% for i=1:y
-%     for j=1:x
-%         if ((i-y/2)^2)+((j-x/2)^2)<(r^2)  %define origin is at the center
-%             sample(i,j) = 1;  %define array inside the circle eq. = 1
-%         end
-%     end
-% end
+
 sample = imread("USAF-1951.svg.png");
 [r c] = size(sample)
 sample = double(sample(r/2-pixels/2:r/2+pixels/2-1,r/2-pixels/2:r/2+pixels/2-1));
@@ -136,12 +127,7 @@ for i = 1:length(theta_)
     % D_tA = cat([D_tAp1] [D_tAp2] [D_tAp3]);
     
 %     S_tA = D_tA;
-    
-    kx = k0/pixels*cosd(theta);
-    ky = k0/pixels*sind(theta);
-    
-    % kshift = [-round(kx), round(ky)];
-    % kshift = [round(kx*pixels-pixels/2), round(ky*pixels-pixels/2)];
+   
     
     for j=1:length(phi_)
         maximum = max(max(D_tA(:,:,j))); [ind1,ind2] = find(D_tA(:,:,j) == maximum);
@@ -149,9 +135,6 @@ for i = 1:length(theta_)
         kshift(:,:,length(theta_)*(i-1)+j) = current_shift;
         S_tA(:,:,length(theta_)*(i-1)+j) = circshift(D_tA(:,:,j),-current_shift);
     end    
-    % maximum = max(max(D_tAp2)); [ind1,ind2] = find(D_tAp2 == maximum);
-    % kshift = [round(ind1-pixels/2), round(ind2-pixels/2)];
-    % S_tAp2 = circshift(D_tAp2,-kshift);
     
     % figure; imagesc(abs(1+log(D_tAp2));
     
@@ -168,13 +151,12 @@ end
 
 
 %% Weiner Filter is Hconj/(|H|^2+Pnoise/Psignal), in our case... we have no additive noise so just becomes H^-1
-% 
+
 H_incoh_freq_sum = zeros(pixels,pixels);
 for j=1:length(phi_)
     for i=1:length(theta_)
 %        shifted_H_incoh_freq = H_incoh_freq;
         shifted_H_incoh_freq = circshift(H_incoh_freq, -kshift(:,:,length(theta_)*(i-1)+j));
-        %tempG = conj(shifted_H_incoh_freq)./(abs(shifted_H_incoh_freq).^2).*S_tA(:,:,3*(i-1)+j);
         tempG = inv(shifted_H_incoh_freq).*(S_tA(:,:,length(theta)*(i-1)+j));
         G(:,:,length(theta_)*(i-1)+j) = tempG;
 %         figure; imagesc(log(1+abs(S_tA(:,:,3*(i-1)+j))))
@@ -190,12 +172,6 @@ reconstructed_freq = S_tA_sum./(H_incoh_freq_sum + 1e-4);
 figure; imagesc(log(1+abs(reconstructed_freq)));
 
 sim_image = ifft2(ifftshift(reconstructed_freq));
-% G_sum = zeros(512,512);
-% 
-% for i=1:9
-%     G_sum = G_sum + G(:,:,i);
-% end
-% G_sum = G_sum/9;
 
 figure;imagesc(abs(sim_image));
 colormap gray
